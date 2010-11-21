@@ -15,10 +15,20 @@ def _main():
     parser.add_option("-f", "--file-path", dest="file_path",
                       help="Filesystem path to static files which we will expose as Linker options")
 
-    default_port = "8080"
+    default = "/"
+    parser.add_option("-u", "--xinha-url", dest="xinha_url",
+                      help="URL to mount Xinha static files on (default: %s)" % default,
+                      default=default)
+
+    default="/linker_backend"
+    parser.add_option("-l", "--linker-url", dest="linker_url",
+                      help="URL to mount Linker backend on (default: %s)" % default,
+                      default=default)
+
+    default = "8080"
     parser.add_option("-p", "--port", dest="port",
-                      help="Port to serve on (default: %s)" % default_port,
-                      default=default_port)
+                      help="Port to serve on (default: %s)" % default,
+                      default=default)
     
     (options, args) = parser.parse_args()
 
@@ -27,16 +37,17 @@ def _main():
         parser.print_help()
         return
 
-    app = build_app(options.xinha_path, options.file_path)
+    app = build_app(options.xinha_path, options.file_path,
+                    options.xinha_url, options.linker_url)
     serve(app, port=options.port)
 
-def build_app(xinha_path, file_path):
+def build_app(xinha_path, file_path, xinha_url, linker_url):
     static_app = DirectoryApp(xinha_path)
     linker_app = LinkerApp(file_path)
 
     app = URLMap()
-    app['/linker_backend'] = linker_app
-    app['/'] = static_app
+    app[linker_url] = linker_app
+    app[xinha_url] = static_app
     
     return app
 
