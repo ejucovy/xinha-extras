@@ -1,0 +1,18 @@
+== What's here ==
+
+A Python server with some WSGI applications that statically serve Xinha,
+and provide a backend for Linker.
+
+Install it:
+{{{
+virtualenv /tmp/my-ve
+source /tmp/my-ve/bin/activate
+easy_install pip
+pip install -r server/requirements.txt
+}}}
+
+Run it:
+{{{
+python server/paste_server.py
+}}}
+
