@@ -2,3 +2,4 @@ Paste
 PasteScript
 WebOb
 simplejson
+Tempita
