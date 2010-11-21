@@ -15,7 +15,7 @@ def _main():
     parser.add_option("-f", "--file-path", dest="file_path",
                       help="Filesystem path to static files which we will expose as Linker options")
 
-    default = "/"
+    default = "/xinha"
     parser.add_option("-u", "--xinha-url", dest="xinha_url",
                       help="URL to mount Xinha static files on (default: %s)" % default,
                       default=default)
@@ -23,6 +23,11 @@ def _main():
     default="/linker_backend"
     parser.add_option("-l", "--linker-url", dest="linker_url",
                       help="URL to mount Linker backend on (default: %s)" % default,
+                      default=default)
+
+    default="/"
+    parser.add_option("-e", "--example-url", dest="example_url",
+                      help="URL to mount example on (default: %s)" % default,
                       default=default)
 
     default = "8080"
@@ -38,19 +43,45 @@ def _main():
         return
 
     app = build_app(options.xinha_path, options.file_path,
-                    options.xinha_url, options.linker_url)
+                    options.xinha_url, options.linker_url,
+                    options.example_url)
     serve(app, port=options.port)
 
-def build_app(xinha_path, file_path, xinha_url, linker_url):
+def build_app(xinha_path, file_path, xinha_url, linker_url, example_url):
     static_app = DirectoryApp(xinha_path)
     linker_app = LinkerApp(file_path)
 
     app = URLMap()
     app[linker_url] = linker_app
     app[xinha_url] = static_app
-    
+
+    example_path = os.path.dirname(os.path.abspath(__file__))
+
+    app[example_url] = ExampleApp(example_path,
+                                  linker_url=linker_url,
+                                  xinha_url=xinha_url)
+
     return app
 
+import tempita
+
+class ExampleApp(object):
+    def __init__(self, path, **args):
+        self.path = path.rstrip('/') + '/'
+        self.args = args
+
+    def __call__(self, environ, start_response):
+        req = Request(environ)
+        path = req.path_info.lstrip('/')
+        filepath = os.path.join(self.path, path)
+
+        print filepath
+        assert os.path.exists(filepath)
+
+        tmpl = tempita.Template.from_filename(filepath)
+        body = tmpl.substitute(self.args)
+        return Response(body)(
+            environ, start_response)
 
 def scan(req, path):
     files = []
@@ -75,7 +106,7 @@ class LinkerApp(object):
         req = Request(environ)
         path = req.path_info
         path = path.split('/')
-        path = self.file_path + path
+        path = [self.file_path] + path
         path = os.path.join(*path)
         assert os.path.exists(path)
         files = scan(req, path)
